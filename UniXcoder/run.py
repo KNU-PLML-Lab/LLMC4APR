@@ -56,23 +56,25 @@ class Example(object):
         self.source = source
         self.target = target
 
-def read_examples(filename):
-    """Read examples from filename."""
-    examples=[]
-    with open(filename,encoding="utf-8") as f:
-        for idx, line in enumerate(f):
-            line=line.strip()
-            js=json.loads(line)
-            examples.append(
-                Example(
-                        idx = idx,
-                        source=" ".join(js['nl'].split()),
-                        target = " ".join(js["code"].split()),
-                        ) 
-            )
-            
-    return examples
+import pandas as pd
+COLUMNS = ['Correct_code', 'Incorrect_code', 'Statement']
 
+def read_examples(filename):
+  """Read examples from filename for DeepFix style training Line stmt Line stmt Line stmt ..."""
+  examples = []
+  data = pd.read_csv(filename, sep='\t', header=[0]).drop(columns=COLUMNS[0])
+  for idx, elem in data.iterrows():
+    code = ' '.join(elem[COLUMNS[1]].split('||| '))[:-1].strip()
+    stmt = elem[COLUMNS[2]].strip()
+
+    examples.append(
+      Example(
+              idx = idx,
+              source = code,
+              target = stmt,
+              )
+    )
+  return examples 
 
 class InputFeatures(object):
     """A single training/test features for a example."""
@@ -80,10 +82,15 @@ class InputFeatures(object):
                  example_id,
                  source_ids,
                  target_ids,
+                 source_mask,
+                 target_mask,
+
     ):
         self.example_id = example_id
         self.source_ids = source_ids
-        self.target_ids = target_ids     
+        self.target_ids = target_ids
+        self.source_mask = source_mask
+        self.target_mask = target_mask      
         
 def convert_examples_to_features(examples, tokenizer, args,stage=None):
     features = []
@@ -105,17 +112,6 @@ def convert_examples_to_features(examples, tokenizer, args,stage=None):
         padding_length = args.max_target_length - len(target_ids)
         target_ids+=[tokenizer.pad_token_id]*padding_length
    
-        if example_index < 5:
-            if stage=='train':
-                logger.info("*** Example ***")
-                logger.info("idx: {}".format(example.idx))
-
-                logger.info("source_tokens: {}".format([x.replace('\u0120','_') for x in source_tokens]))
-                logger.info("source_ids: {}".format(' '.join(map(str, source_ids))))
-                
-                logger.info("target_tokens: {}".format([x.replace('\u0120','_') for x in target_tokens]))
-                logger.info("target_ids: {}".format(' '.join(map(str, target_ids))))
-       
         features.append(
             InputFeatures(
                  example_index,
@@ -358,24 +354,25 @@ def main():
                 logger.info("  %s = %s "%("EM",str(round(np.mean(EM)*100,2))))
                 logger.info("  "+"*"*20)    
                 dev_score = dev_bleu+round(np.mean(EM)*100,2)
+                #save last checkpoint
+                last_output_dir = os.path.join(args.output_dir, 'checkpoint-last')
+                if not os.path.exists(last_output_dir):
+                    os.makedirs(last_output_dir)
+                model_to_save = model.module if hasattr(model, 'module') else model  # Only save the model it-self
+                output_model_file = os.path.join(last_output_dir, "pytorch_model.bin")
+                torch.save(model_to_save.state_dict(), output_model_file)  
+                
                 if dev_score>best_score:
                     logger.info("  Best score:%s",dev_score)
                     logger.info("  "+"*"*20)
                     best_score=dev_score
-                    # Save best checkpoint for best bleu
-                    output_dir = os.path.join(args.output_dir, 'checkpoint-best-score')
-                    if not os.path.exists(output_dir):
-                        os.makedirs(output_dir)
-                    model_to_save = model.module if hasattr(model, 'module') else model  # Only save the model it-self
-                    output_model_file = os.path.join(output_dir, "pytorch_model.bin")
-                    torch.save(model_to_save.state_dict(), output_model_file)
                     patience =0
                 else:
                     patience +=1
                     if patience == -1:
                         break
     if args.do_test:
-        checkpoint_prefix = 'checkpoint-best-score/pytorch_model.bin'
+        checkpoint_prefix = 'checkpoint-last/pytorch_model.bin'
         output_dir = os.path.join(args.output_dir, checkpoint_prefix)  
         model_to_load = model.module if hasattr(model, 'module') else model  
         model_to_load.load_state_dict(torch.load(output_dir))          

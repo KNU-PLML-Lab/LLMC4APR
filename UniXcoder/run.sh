@@ -12,8 +12,8 @@ target_length=150
 output_dir=models/$lang
 
 data_dir=../../dataset
-train_file=../ksc/single_line_r_train.txt
-dev_file=../ksc/single_line_r_valid.txt
+train_file=../data/single_line_r_train.txt
+dev_file=../data/single_line_r_valid.txt
 epochs=10
 # pretrained_model=../../../pretrained-model/UniXcoder-base/
 pretrained_model=microsoft/unixcoder-base
