@@ -25,7 +25,6 @@ python run.py \
 --model_name_or_path $pretrained_model \
 --train_filename $train_file \
 --dev_filename $dev_file \
---tokenizer_name roberta-base \
 --output_dir $output_dir \
 --max_source_length $source_length \
 --max_target_length $target_length \
@@ -35,22 +34,23 @@ python run.py \
 --learning_rate $lr \
 --gradient_accumulation_steps $accm_steps \
 --num_train_epochs $epochs 2>&1| tee $output_dir/train.log
+# --tokenizer_name roberta-base \
 
 
-batch_size=64
-train_file=../ksc/single_line_r_train.txt
-dev_file=../ksc/single_line_r_valid.txt
-test_model=$output_dir/checkpoint-last/pytorch_model.bin #checkpoint for test
+# batch_size=64
+# train_file=../data/single_line_r_train.txt
+# dev_file=../data/single_line_r_valid.txt
+# test_model=$output_dir/checkpoint-last/pytorch_model.bin #checkpoint for test
 
-python run.py \
---do_test \
---model_name_or_path $pretrained_model \
---load_model_path $test_model \
---dev_filename $dev_file \
---test_filename $test_file \
---output_dir $output_dir \
---max_source_length $source_length \
---max_target_length $target_length \
---beam_size $beam_size \
---gradient_accumulation_steps $accm_steps \
---eval_batch_size $batch_size 2>&1| tee $output_dir/test.log
+# python run.py \
+# --do_test \
+# --model_name_or_path $pretrained_model \
+# --load_model_path $test_model \
+# --dev_filename $dev_file \
+# --test_filename $test_file \
+# --output_dir $output_dir \
+# --max_source_length $source_length \
+# --max_target_length $target_length \
+# --beam_size $beam_size \
+# --gradient_accumulation_steps $accm_steps \
+# --eval_batch_size $batch_size 2>&1| tee $output_dir/test.log
