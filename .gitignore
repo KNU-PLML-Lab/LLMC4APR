@@ -166,3 +166,6 @@ cython_debug/
 
 # temporary directory of APR
 *tmp*
+
+# dataDir
+*data/
